@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "crawl": "tsx scripts/crawl.ts"
+    "crawl": "tsx scripts/crawl.ts",
+    "analyse": "tsx scripts/analyse.ts"
   },
   "dependencies": {
     "next": "^15.5.0",

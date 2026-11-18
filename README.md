@@ -55,6 +55,22 @@ pnpm crawl -- https://example.com
 
 The command respects `robots.txt`, discovers representative templates, captures raw and rendered HTML, and prints a validated `CrawlResult` JSON document.
 
+## Analysis milestone
+
+Pipe a crawl result directly into the analysis command:
+
+```bash
+pnpm crawl -- https://example.com | pnpm analyse
+```
+
+Optional traffic and catalog inputs improve the estimate:
+
+```bash
+pnpm crawl -- https://example.com | pnpm analyse -- --traffic 500000 --catalog 10000
+```
+
+The command prints a validated `Report` JSON document. It does not write crawl or report data to disk.
+
 ## Limits
 - It only sees the public front end. ERP, OMS, custom checkout, search and promotion logic are surfaced as discovery questions, not guessed.
 - Estimates are ranges built on stated assumptions, not quotes.
