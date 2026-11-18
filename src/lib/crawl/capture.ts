@@ -1,4 +1,4 @@
-import { chromium, type BrowserContext, type Page, type Request, type Response } from "playwright";
+import type { BrowserContext, LaunchOptions, Page, Request, Response } from "playwright";
 import type { CapturedPage } from "./types";
 import { classifyUrl, discoverTemplates, isSensitiveUrl } from "./discover";
 import { RobotsPolicyError, type RobotsPolicy } from "./robots";
@@ -179,7 +179,16 @@ export async function captureStorefront(
     );
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const launchOptions: LaunchOptions = { headless: true };
+  if (process.env.VERCEL) {
+    const serverlessChromium = (await import("@sparticuz/chromium")).default;
+    launchOptions.args = serverlessChromium.args;
+    launchOptions.executablePath = await serverlessChromium.executablePath();
+  } else {
+    process.env.PLAYWRIGHT_BROWSERS_PATH ??= "0";
+  }
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch(launchOptions);
   const context = await browser.newContext({
     userAgent: "MigrationCopilotBot/0.1 (+public storefront scope analysis)",
   });

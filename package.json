@@ -8,14 +8,17 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
+    "postinstall": "node scripts/install-playwright-browser.mjs",
+    "install:browser": "node scripts/install-playwright-browser.mjs",
     "crawl": "tsx scripts/crawl.ts",
     "analyse": "tsx scripts/analyse.ts"
   },
   "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
     "next": "^15.5.0",
+    "playwright": "^1.55.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "playwright": "^1.55.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {
