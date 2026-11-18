@@ -53,7 +53,7 @@ npm run dev
 For local development, `npm install` downloads the headless Chromium browser used by the app and CLI. If browser installation was skipped, run `npm run install:browser`. The Vercel API function uses its bundled serverless Chromium runtime.
 
 Open http://localhost:3000 and paste a storefront URL.
-The web app stores generated reports in process memory; they are temporary and may not be available across restarts or serverless instances.
+Generated reports are saved in the browser's local storage so report pages work across serverless instances and browser restarts. Report links are only available in the same browser and origin; clearing browser storage removes them.
 
 ## Crawl milestone
 

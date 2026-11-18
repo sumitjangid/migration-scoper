@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       catalogSize: body.catalogSize,
     });
 
-    return NextResponse.json({ id: saveReport(report) });
+    return NextResponse.json({ id: saveReport(report), report });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Scope analysis failed.";
     const status = error instanceof RobotsPolicyError ? 403 : 400;

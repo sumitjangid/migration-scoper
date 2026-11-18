@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ReportSchema } from "../lib/analyse/schemas";
+import { saveBrowserReport } from "../lib/report/browser-store";
 
 export default function Home() {
   const router = useRouter();
@@ -27,8 +29,13 @@ export default function Home() {
           catalogSize: catalog ? Number(catalog) : undefined,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Scope analysis failed.");
+      const data: { id?: unknown; report?: unknown; error?: unknown } = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "Scope analysis failed.");
+      }
+      if (typeof data.id !== "string") throw new Error("The scope response did not include a report ID.");
+      const report = ReportSchema.parse(data.report);
+      saveBrowserReport(window.localStorage, data.id, report);
       router.push(`/report/${data.id}`);
     } catch (cause) {
       setStatus("error");

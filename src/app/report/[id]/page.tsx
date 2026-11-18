@@ -2,23 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Report } from "../../../lib/analyse/schemas";
+import { ReportSchema, type Report } from "../../../lib/analyse/schemas";
 import { renderMarkdown } from "../../../lib/report/markdown";
+import { getBrowserReport } from "../../../lib/report/browser-store";
 
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    params.then(({ id }) => {
-      fetch(`/api/reports/${id}`)
-        .then(async (response) => {
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.error ?? "Report not found.");
-          setReport(data);
-        })
-        .catch((cause) => setError(cause instanceof Error ? cause.message : "Report not found."));
-    });
+    params.then(async ({ id }) => {
+      const savedReport = getBrowserReport(window.localStorage, id);
+      if (savedReport) {
+        setReport(savedReport);
+        return;
+      }
+
+      const response = await fetch(`/api/reports/${id}`);
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        const error = data && typeof data === "object" && "error" in data ? data.error : undefined;
+        throw new Error(typeof error === "string" ? error : "Report not found.");
+      }
+      setReport(ReportSchema.parse(data));
+    }).catch((cause) => setError(cause instanceof Error ? cause.message : "Report not found."));
   }, [params]);
 
   function downloadMarkdown() {
