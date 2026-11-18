@@ -17,6 +17,23 @@ describe("scope rate limit", () => {
     });
   });
 
+  it("uses configured limits in development", async () => {
+    vi.stubEnv("SCOPE_RATE_LIMIT_PER_IP", "1");
+
+    await enforceScopeRateLimit("203.0.113.44");
+    await expect(enforceScopeRateLimit("203.0.113.44")).rejects.toMatchObject({
+      status: 429,
+    });
+  });
+
+  it("rejects invalid limit configuration", async () => {
+    vi.stubEnv("SCOPE_RATE_LIMIT_PER_IP", "0");
+
+    await expect(enforceScopeRateLimit("203.0.113.45")).rejects.toMatchObject({
+      status: 503,
+    });
+  });
+
   it("fails closed in production when the shared limiter is not configured", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
@@ -42,5 +59,20 @@ describe("scope rate limit", () => {
       "https://redis.example/pipeline",
       expect.objectContaining({ method: "POST" }),
     );
+  });
+
+  it("uses configured limits with the shared limiter", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SCOPE_RATE_LIMIT_PER_IP", "1");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://redis.example");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+      JSON.stringify([{ result: [2, 1] }]),
+      { headers: { "Content-Type": "application/json" } },
+    )));
+
+    await expect(enforceScopeRateLimit("203.0.113.46")).rejects.toMatchObject({
+      status: 429,
+    });
   });
 });

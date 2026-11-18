@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 
 const windowSeconds = 60 * 60;
-const clientLimit = 3;
-const globalLimit = 24;
+const defaultClientLimit = 3;
+const defaultGlobalLimit = 24;
 const incrementScript = [
   "local client = redis.call('INCR', KEYS[1])",
   "if client == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end",
@@ -26,7 +26,18 @@ const localCounters = new Map<string, { count: number; expiresAt: number }>();
 let localGlobalCount = 0;
 let localGlobalExpiresAt = 0;
 
-function checkLocalRateLimit(clientKey: string): void {
+function configuredLimit(name: string, defaultValue: number): number {
+  const rawValue = process.env[name]?.trim();
+  if (!rawValue) return defaultValue;
+
+  const value = Number(rawValue);
+  if (!/^\d+$/.test(rawValue) || !Number.isSafeInteger(value) || value < 1) {
+    throw new ScopeRateLimitError("Crawl rate limiting is not configured correctly.", 503);
+  }
+  return value;
+}
+
+function checkLocalRateLimit(clientKey: string, clientLimit: number, globalLimit: number): void {
   const now = Date.now();
   for (const [key, counter] of localCounters) {
     if (counter.expiresAt <= now) localCounters.delete(key);
@@ -48,9 +59,11 @@ export async function enforceScopeRateLimit(clientAddress: string): Promise<void
   if (!clientAddress || (clientAddress !== "local" && !isIP(clientAddress))) {
     throw new ScopeRateLimitError("Could not identify the request source.", 503);
   }
+  const clientLimit = configuredLimit("SCOPE_RATE_LIMIT_PER_IP", defaultClientLimit);
+  const globalLimit = configuredLimit("SCOPE_RATE_LIMIT_GLOBAL", defaultGlobalLimit);
   const clientKey = createHash("sha256").update(clientAddress).digest("hex");
   if (process.env.NODE_ENV !== "production") {
-    checkLocalRateLimit(clientKey);
+    checkLocalRateLimit(clientKey, clientLimit, globalLimit);
     return;
   }
 

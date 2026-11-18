@@ -62,9 +62,11 @@ Production requires an Upstash Redis REST database. Configure these server-side 
 ```text
 UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
+SCOPE_RATE_LIMIT_PER_IP=3
+SCOPE_RATE_LIMIT_GLOBAL=24
 ```
 
-The scope endpoint allows up to 3 crawls per source IP and 24 crawls total per hour. It returns an error instead of accepting crawls if the shared limiter is not configured or available. Local development uses an in-memory limiter.
+The scope endpoint allows up to 3 crawls per source IP and 24 crawls total per hour by default. Set `SCOPE_RATE_LIMIT_PER_IP` and `SCOPE_RATE_LIMIT_GLOBAL` to positive integers to adjust those hourly limits for demos or testing; they apply in both local development and production. Invalid values fail closed. Local development uses an in-memory limiter, while production requires the shared limiter to be configured and available.
 
 ## Crawl milestone
 
