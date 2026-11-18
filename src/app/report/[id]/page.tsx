@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Report } from "../../../lib/analyse/schemas";
 import { renderMarkdown } from "../../../lib/report/markdown";
 
@@ -41,11 +42,11 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   return (
     <main className="report-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Migration Copilot home">
+        <Link className="brand" href="/" aria-label="Migration Copilot home">
           <span className="brand-mark">M</span>
           <span>Migration Copilot</span>
-        </a>
-        <a className="back-link" href="/">← New analysis</a>
+        </Link>
+        <Link className="back-link" href="/">← New analysis</Link>
       </header>
       <div className="report-content">
         <div className="report-heading">

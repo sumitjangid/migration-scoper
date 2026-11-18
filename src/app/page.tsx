@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Home() {
   const router = useRouter();
@@ -38,10 +39,10 @@ export default function Home() {
   return (
     <main className="site-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Migration Copilot home">
+        <Link className="brand" href="/" aria-label="Migration Copilot home">
           <span className="brand-mark">M</span>
           <span>Migration Copilot</span>
-        </a>
+        </Link>
         <span className="topbar-note">Storefront migration, made legible.</span>
       </header>
 
