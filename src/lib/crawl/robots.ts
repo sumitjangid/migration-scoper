@@ -1,6 +1,9 @@
+import { assertPublicHttpUrl, type ResolvedAddress } from "./url-safety";
+
 const userAgent = "MigrationCopilotBot";
 const robotsTimeoutMs = 10_000;
 const maxRobotsBytes = 512_000;
+const maxRobotsRedirects = 5;
 
 type Rule = { allow: boolean; pattern: string };
 type Group = { agents: string[]; rules: Rule[]; crawlDelaySeconds?: number };
@@ -131,7 +134,10 @@ export function createRobotsPolicy(
   };
 }
 
-export async function loadRobotsPolicy(targetUrl: string): Promise<RobotsPolicy> {
+export async function loadRobotsPolicy(
+  targetUrl: string,
+  resolveAddresses?: (hostname: string) => Promise<ResolvedAddress[]>,
+): Promise<RobotsPolicy> {
   let origin: string;
   try {
     origin = new URL(targetUrl).origin;
@@ -140,13 +146,27 @@ export async function loadRobotsPolicy(targetUrl: string): Promise<RobotsPolicy>
   }
 
   let response: Response;
+  let robotsUrl = `${origin}/robots.txt`;
+  const signal = AbortSignal.timeout(robotsTimeoutMs);
   try {
-    response = await fetch(`${origin}/robots.txt`, {
-      headers: { "User-Agent": `${userAgent}/0.1 (+public storefront scope analysis)` },
-      signal: AbortSignal.timeout(robotsTimeoutMs),
-      redirect: "follow",
-    });
+    for (let redirects = 0; ; redirects += 1) {
+      await assertPublicHttpUrl(robotsUrl, resolveAddresses);
+      response = await fetch(robotsUrl, {
+        headers: { "User-Agent": `${userAgent}/0.1 (+public storefront scope analysis)` },
+        signal,
+        redirect: "manual",
+      });
+      if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      if (redirects >= maxRobotsRedirects) {
+        throw new RobotsPolicyError("robots.txt redirected too many times; crawl blocked.");
+      }
+      const location = response.headers.get("location");
+      if (!location) throw new RobotsPolicyError("robots.txt returned a redirect without a location.");
+      await response.body?.cancel();
+      robotsUrl = new URL(location, robotsUrl).toString();
+    }
   } catch (error) {
+    if (error instanceof RobotsPolicyError) throw error;
     const detail = error instanceof Error ? error.message : String(error);
     throw new RobotsPolicyError(`Could not verify robots.txt; crawl blocked. ${detail}`);
   }

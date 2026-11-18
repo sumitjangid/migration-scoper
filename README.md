@@ -14,7 +14,7 @@ The crawler limits its page count and request behavior, but crawling can still c
 
 Reports are approximate planning aids based on limited public-page observations. They may be incomplete or incorrect and are not professional, legal, security, or cost advice, nor a quote or guarantee of results.
 
-The web endpoint accepts user-supplied URLs. Do not deploy it as a public service until protections against requests to private/internal network addresses, abuse, and resource exhaustion are added.
+The scope endpoint accepts user-supplied URLs and applies destination checks, DNS pinning, request-size limits, and crawl rate limits. These controls reduce risk but are not a guarantee against all abuse.
 
 ## What you get
 
@@ -55,6 +55,17 @@ For local development, `npm install` downloads the headless Chromium browser use
 Open http://localhost:3000 and paste a storefront URL.
 Generated reports are saved in the browser's local storage so report pages work across serverless instances and browser restarts. Report links are only available in the same browser and origin; clearing browser storage removes them.
 
+### Production rate limiting
+
+Production requires an Upstash Redis REST database. Configure these server-side environment variables in the hosting platform:
+
+```text
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+```
+
+The scope endpoint allows up to 3 crawls per source IP and 24 crawls total per hour. It returns an error instead of accepting crawls if the shared limiter is not configured or available. Local development uses an in-memory limiter.
+
 ## Crawl milestone
 
 Run a public storefront crawl from the CLI:
@@ -88,7 +99,7 @@ The command prints a validated `Report` JSON document. It does not write crawl o
 - The crawler checks robots.txt before navigation, applies its rules to first-party requests, and stops if the policy cannot be verified. Missing robots.txt (404/410) is treated as no published restrictions.
 - It captures at most 8 same-origin pages, waits at least one second between page captures, and honors crawl-delay up to 30 seconds; larger delays stop the crawl.
 - Cart/checkout pages, third-party resources, and non-GET/HEAD requests are excluded. Page scripts still run on allowed first-party pages, so this is not a guarantee of zero side effects.
-- The web endpoint currently accepts user-supplied URLs without protections against private/internal network targets or automated abuse. Do not expose it as a public service until those protections are implemented.
+- The web endpoint only accepts standard HTTP(S) ports on hosts that resolve exclusively to public addresses; browser requests are pinned to a validated address and restricted to the storefront origin. Production rate limits are shared through Upstash and fail closed when unavailable. These safeguards cannot guarantee zero risk or load.
 
 ## Roadmap
 - Magento support first, then Shopify, then Hybris

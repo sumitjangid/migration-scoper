@@ -2,6 +2,7 @@ import type { BrowserContext, LaunchOptions, Page, Request, Response } from "pla
 import type { CapturedPage } from "./types";
 import { classifyUrl, discoverTemplates, isSensitiveUrl } from "./discover";
 import { RobotsPolicyError, type RobotsPolicy } from "./robots";
+import { assertPublicHttpUrl } from "./url-safety";
 
 const defaultTimeoutMs = 30_000;
 const pageDelayMs = 1_000;
@@ -179,13 +180,23 @@ export async function captureStorefront(
     );
   }
 
+  const { url: safeUrl, addresses } = await assertPublicHttpUrl(startUrl);
+  const pinnedAddress = addresses.find((address) => address.family === 4) ?? addresses[0];
+  if (!pinnedAddress) {
+    throw new Error("The storefront hostname did not resolve to a public address.");
+  }
+  const hostname = safeUrl.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  const resolvedAddress = pinnedAddress.family === 6 ? `[${pinnedAddress.address}]` : pinnedAddress.address;
+  const resolverRule = `--host-resolver-rules=MAP ${hostname} ${resolvedAddress}`;
+
   const launchOptions: LaunchOptions = { headless: true };
   if (process.env.VERCEL) {
     const serverlessChromium = (await import("@sparticuz/chromium")).default;
-    launchOptions.args = serverlessChromium.args;
+    launchOptions.args = [...serverlessChromium.args, resolverRule];
     launchOptions.executablePath = await serverlessChromium.executablePath();
   } else {
     process.env.PLAYWRIGHT_BROWSERS_PATH ??= "0";
+    launchOptions.args = [resolverRule];
   }
   const { chromium } = await import("playwright");
   const browser = await chromium.launch(launchOptions);

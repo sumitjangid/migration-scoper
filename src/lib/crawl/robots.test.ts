@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRobotsPolicy, loadRobotsPolicy, RobotsPolicyError } from "./robots";
 
 const origin = "https://example.com";
+const publicResolver = async () => [{ address: "8.8.8.8", family: 4 }];
 
 describe("robots policy", () => {
   afterEach(() => {
@@ -47,22 +48,31 @@ describe("robots policy", () => {
   it("fails closed when robots.txt cannot be retrieved", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network unavailable")));
 
-    await expect(loadRobotsPolicy(origin)).rejects.toThrow(RobotsPolicyError);
+    await expect(loadRobotsPolicy(origin, publicResolver)).rejects.toThrow(RobotsPolicyError);
+  });
+
+  it("does not follow robots.txt redirects to local addresses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", {
+      status: 302,
+      headers: { location: "http://127.0.0.1/robots.txt" },
+    })));
+
+    await expect(loadRobotsPolicy(origin, publicResolver)).rejects.toThrow(RobotsPolicyError);
   });
 
   it("treats a missing robots.txt as no published restrictions", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 404 })));
 
-    const policy = await loadRobotsPolicy(origin);
+    const policy = await loadRobotsPolicy(origin, publicResolver);
     expect(policy.check(`${origin}/any-page`).allowed).toBe(true);
   });
 
   it("fails closed on server errors and denies all on access-restricted robots.txt", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 503 })));
-    await expect(loadRobotsPolicy(origin)).rejects.toThrow(/HTTP 503/);
+    await expect(loadRobotsPolicy(origin, publicResolver)).rejects.toThrow(/HTTP 503/);
 
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 403 })));
-    const policy = await loadRobotsPolicy(origin);
+    const policy = await loadRobotsPolicy(origin, publicResolver);
     expect(policy.check(`${origin}/`).allowed).toBe(false);
   });
 });
