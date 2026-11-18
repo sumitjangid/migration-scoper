@@ -22,6 +22,11 @@ export function classifyUrl(url: string, isRoot = false): TemplateType {
   return "content";
 }
 
+export function isSensitiveUrl(url: string): boolean {
+  const pathname = new URL(url).pathname;
+  return /(?:^|\/)(?:cart|basket|checkout)(?:\/|$)/i.test(pathname);
+}
+
 export async function discoverTemplates(
   page: Page,
   startUrl: string,
@@ -45,6 +50,7 @@ export async function discoverTemplates(
     if (["mailto:", "tel:"].includes(absolute.protocol)) continue;
 
     const url = absolute.toString();
+    if (isSensitiveUrl(url)) continue;
     if (candidates.has(url)) continue;
     candidates.set(url, { url, template: classifyUrl(url) });
   }

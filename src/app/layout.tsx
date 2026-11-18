@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./theme-monochrome.css";
 
 export const metadata: Metadata = {
   title: "Migration Copilot",

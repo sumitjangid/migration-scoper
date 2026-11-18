@@ -1,7 +1,7 @@
 import { CrawlResultSchema } from "../src/lib/crawl/types";
 import { captureStorefront } from "../src/lib/crawl/capture";
 import { detectPlatform } from "../src/lib/crawl/detect-platform";
-import { checkRobots } from "../src/lib/crawl/robots";
+import { loadRobotsPolicy } from "../src/lib/crawl/robots";
 
 async function main() {
   const requestedUrl = process.argv[2];
@@ -22,20 +22,19 @@ async function main() {
     process.exit(1);
   }
 
-  const robots = await checkRobots(requestedUrl);
-  if (!robots.allowed) {
-    throw new Error(`Crawl blocked by robots.txt: ${robots.note}`);
-  }
-
-  const pages = await captureStorefront(requestedUrl);
+  const robotsPolicy = await loadRobotsPolicy(requestedUrl);
+  const pages = await captureStorefront(requestedUrl, { robotsPolicy });
   const result = CrawlResultSchema.parse({
     requestedUrl,
     finalUrl: pages[0]?.url ?? requestedUrl,
     platform: detectPlatform(pages),
     pages,
-    robotsAllowed: robots.allowed,
-    robotsNote: robots.note,
-    warnings: pages.length === 0 ? ["No pages were captured."] : [],
+    robotsAllowed: true,
+    robotsNote: robotsPolicy.note,
+    warnings: [
+      ...(pages.length === 0 ? ["No pages were captured."] : []),
+      "Cart and checkout pages, third-party resources, and non-GET requests are excluded from capture.",
+    ],
     crawledAt: new Date().toISOString(),
   });
 
