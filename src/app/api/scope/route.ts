@@ -6,7 +6,10 @@ import { loadRobotsPolicy, RobotsPolicyError } from "../../../lib/crawl/robots";
 import { CrawlResultSchema } from "../../../lib/crawl/types";
 import { assertPublicHttpUrl } from "../../../lib/crawl/url-safety";
 import { createReport } from "../../../lib/analyse/report";
+import { enrichReportWithAI } from "../../../lib/ai";
+import { resolveAIModel } from "../../../lib/ai/model";
 import { saveReport } from "../../../lib/report/store";
+import { AIReportQuotaError, consumeAIReportQuota } from "../../../lib/security/ai-rate-limit";
 import { enforceScopeRateLimit, ScopeRateLimitError } from "../../../lib/security/rate-limit";
 import { isIP } from "node:net";
 
@@ -86,10 +89,20 @@ export async function POST(request: Request) {
       ],
       crawledAt: new Date().toISOString(),
     });
-    const report = createReport(crawl, {
+    const deterministicReport = createReport(crawl, {
       monthlyTraffic: body.monthlyTraffic,
       catalogSize: body.catalogSize,
     });
+    let report = deterministicReport;
+    try {
+      if (resolveAIModel().enabled && await consumeAIReportQuota(getClientAddress(request))) {
+        report = await enrichReportWithAI(deterministicReport);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Unknown AI enrichment error.";
+      const source = error instanceof AIReportQuotaError ? "AI report quota unavailable" : "AI enrichment failed";
+      console.error(`${source}; returning deterministic report: ${reason}`);
+    }
 
     return NextResponse.json({ id: saveReport(report), report });
   } catch (error) {

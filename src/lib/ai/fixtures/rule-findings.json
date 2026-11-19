@@ -1,0 +1,52 @@
+{
+  "requestedUrl": "https://example.com",
+  "findings": [
+    {
+      "kind": "platform",
+      "key": "platform",
+      "value": "Unknown",
+      "evidence": [
+        {
+          "signal": "No known Magento, Hybris, or Shopify platform marker was detected.",
+          "template": "platform"
+        }
+      ]
+    },
+    {
+      "kind": "template",
+      "key": "product",
+      "value": "ISR",
+      "evidence": [
+        {
+          "signal": "Product page has one canonical and a stable rendered document.",
+          "template": "product"
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "key": "structured-data",
+      "value": "No JSON-LD blocks were found in raw HTML.",
+      "evidence": [
+        {
+          "signal": "Product page: 0 JSON-LD blocks in raw HTML.",
+          "template": "product"
+        }
+      ]
+    },
+    {
+      "kind": "unknown",
+      "key": "backend",
+      "value": "ERP, OMS, search, promotions, auth, and checkout behavior remain unknown.",
+      "evidence": [
+        {
+          "signal": "Only public GET pages were captured.",
+          "template": "crawl"
+        }
+      ]
+    }
+  ],
+  "assumptions": [
+    "Only public pages were observed; authenticated and backend behavior remains unknown."
+  ]
+}

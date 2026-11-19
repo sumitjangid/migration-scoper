@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  DiscoveryQuestionSchema as AIDiscoveryQuestionSchema,
+  ExecutiveSummarySchema,
+  RationaleSchema,
+} from "../ai/schemas";
 
 export const TemplateAnalysisSchema = z.object({
   template: z.enum(["home", "category", "product", "search", "cart", "content"]),
@@ -53,6 +58,15 @@ export const ReportSchema = z.object({
   })),
   assumptionsAndUnknowns: z.array(z.string()),
   analyzedAt: z.string().datetime(),
+  ai: z.object({
+    questions: z.array(AIDiscoveryQuestionSchema).optional(),
+    summary: ExecutiveSummarySchema.optional(),
+    rationales: z.array(RationaleSchema).optional(),
+    model: z.string().min(1),
+    generatedAt: z.string().datetime(),
+  }).refine((value) =>
+    value.questions !== undefined || value.summary !== undefined || value.rationales !== undefined,
+  ).optional(),
 });
 
 export type TemplateAnalysis = z.infer<typeof TemplateAnalysisSchema>;

@@ -73,19 +73,54 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
           <Metric label="Monthly Vercel usage" value={`$${report.estimate.vercelUsageRangeUsdMonthly.min}–$${report.estimate.vercelUsageRangeUsdMonthly.max}`} />
         </section>
 
+        {report.ai?.summary && (
+          <Section title="Executive summary">
+            <article className="report-card">
+              <p className="card-meta">AI-generated from crawl evidence · {report.ai.summary.confidence} confidence</p>
+              <p>{report.ai.summary.summary}</p>
+              {report.ai.summary.keyRisks.length > 0 && (
+                <ul className="unknowns-list">
+                  {report.ai.summary.keyRisks.map((risk) => <li key={risk}><span aria-hidden="true">↳</span>{risk}</li>)}
+                </ul>
+              )}
+              <p className="evidence-line">
+                <strong>Evidence:</strong>{" "}
+                {report.ai.summary.evidence.map((item) =>
+                  item.template ? `${item.template}: ${item.signal}` : item.signal,
+                ).join(" · ")}
+              </p>
+            </article>
+          </Section>
+        )}
+
         <Section title="Rendering recommendations">
           <div className="report-card-list">
-            {report.templates.map((item) => (
-              <article key={item.template} className="report-card">
-                <div className="card-title-row">
-                  <h3>{item.template}</h3>
-                  <span className="strategy-tag">{item.strategy}</span>
-                </div>
-                <p>{item.rationale}</p>
-                {item.evidence.length > 0 && <p className="evidence-line"><strong>Evidence:</strong> {item.evidence.join(" · ")}</p>}
-                {item.assumption && <span className="assumption-tag">Assumption</span>}
-              </article>
-            ))}
+            {report.templates.map((item) => {
+              const aiRationale = report.ai?.rationales?.find((rationale) => rationale.template === item.template);
+              return (
+                <article key={item.template} className="report-card">
+                  <div className="card-title-row">
+                    <h3>{item.template}</h3>
+                    <span className="strategy-tag">{item.strategy}</span>
+                  </div>
+                  <p>{item.rationale}</p>
+                  {aiRationale && (
+                    <div>
+                      <p className="card-meta">AI-generated rationale from crawl evidence</p>
+                      <p>{aiRationale.explanation}</p>
+                      <p className="evidence-line">
+                        <strong>Evidence:</strong>{" "}
+                        {aiRationale.evidence.map((evidence) =>
+                          evidence.template ? `${evidence.template}: ${evidence.signal}` : evidence.signal,
+                        ).join(" · ")}
+                      </p>
+                    </div>
+                  )}
+                  {item.evidence.length > 0 && <p className="evidence-line"><strong>Evidence:</strong> {item.evidence.join(" · ")}</p>}
+                  {item.assumption && <span className="assumption-tag">Assumption</span>}
+                </article>
+              );
+            })}
           </div>
         </Section>
 
@@ -116,6 +151,26 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             ))}
           </ul>
         </Section>
+
+        {report.ai?.questions && (
+          <Section title="AI-generated discovery questions">
+            <ul className="report-card-list question-list">
+              {report.ai.questions.map((item, index) => (
+                <li key={`${item.category}-${index}`} className="report-card">
+                  <span className="card-meta">AI-generated from crawl evidence · {item.category}</span>
+                  <h3>{item.question}</h3>
+                  <p>{item.why}</p>
+                  <p className="evidence-line">
+                    <strong>Evidence:</strong>{" "}
+                    {item.evidence.map((evidence) =>
+                      evidence.template ? `${evidence.template}: ${evidence.signal}` : evidence.signal,
+                    ).join(" · ")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
         <Section title="Assumptions and unknowns">
           <ul className="unknowns-list">
